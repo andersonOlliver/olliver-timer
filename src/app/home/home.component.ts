@@ -1,7 +1,7 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import * as moment from 'moment';
 import 'moment/locale/pt-br';
-import { interval } from 'rxjs';
+import { interval, Subscription } from 'rxjs';
 
 @Component({
   templateUrl: './home.component.html',
@@ -12,11 +12,11 @@ export class HomeComponent implements OnInit {
   dia = '';
   diaMes = '';
   date: Date;
-  dateLabel = '';
+  dateLabel = '00:00:00';
   dHour = '';
   dMinute = '';
   dSecond = '';
-  timerId: any;
+  timerId: Subscription;
   posHour = {x: 0, y: 0};
   posMinute = {x: 0, y: 0};
   posSecond = {x: 0, y: 0};
@@ -27,13 +27,44 @@ export class HomeComponent implements OnInit {
 
   ngOnInit() {
     this.dia = moment().format('dddd');
-    this.diaMes = moment().format('MMMM D');
+    this.diaMes = moment().format('D MMMM');
+
+  }
+
+  iniciar() {
+    const time = localStorage.getItem('momento');
+    if (time) {
+      this.dateLabel = time;
+    }
     this.timerId = interval(1000).subscribe(() => this.setCaptions());
-    // this.timerId = setInterval(, 1000);
+  }
+
+  limpar() {
+    if (this.timerId != null) {
+      this.timerId.unsubscribe();
+      this.dateLabel = '00:00:00';
+    }
+    localStorage.removeItem('momento');
+  }
+
+  parar() {
+    if (this.timerId != null) {
+      localStorage.setItem('momento', this.dateLabel);
+      this.timerId.unsubscribe();
+    }
   }
 
   setCaptions() {
-    this.date = new Date();
+    let segundos = moment.duration(this.dateLabel).asSeconds();
+
+    segundos++;
+    const temp = moment().startOf('day').second(segundos);
+    this.dateLabel = temp.format('H:mm:ss');
+    this.date = moment().startOf('day').second(segundos).toDate();
+    this.changeCircles();
+  }
+
+  private changeCircles() {
     const hour = this.date.getHours() % 12;
     const minute = this.date.getMinutes();
     const seconds = this.date.getSeconds();
@@ -47,8 +78,6 @@ export class HomeComponent implements OnInit {
     this.posHour = this.polarToCartesian(520, 240, 170, hourArc);
     this.posMinute = this.polarToCartesian(520, 240, 190, minArc);
     this.posSecond = this.polarToCartesian(520, 240, 210, secArc);
-
-    this.dateLabel = moment().format('H:mm:ss');
   }
 
   describeArc(x, y, radius, startAngle, endAngle) {
